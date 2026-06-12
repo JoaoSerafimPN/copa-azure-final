@@ -99,36 +99,11 @@ Tudo dentro de **um Resource Group** (`rg-prd-tik-cin-001`). Os nomes seguem um 
 
 ## 🗺️ 4. Arquitetura da aplicação
 
-O "mapa do ambiente" — **Cenário 3 VMs, 2 VNets, 2 NSGs** (o que você vai montar):
+O "mapa do ambiente" — **Cenário 3 VMs, 2 VNets, 2 NSGs**:
 
-```
-                          🌎 TORCEDOR (navegador / celular)
-                                      │  HTTP/HTTPS
-                                      ▼
-  ┌────────────────────────── vnet-prd-inf-cin-001  (Central India, 10.20.0.0/16) ──────────────────────────┐
-  │  🏷️ NSG  nsg-prd-inf-cin-001  (associada às DUAS subnets abaixo)                                          │
-  │                                                                                                          │
-  │  ┌── snet-prd-inf-fend-cin-001 (10.20.1.0/24) ──┐   ┌── snet-prd-inf-bend-cin-001 (10.20.2.0/24) ──┐     │
-  │  │  🌐 vm-prd-tk-fend-cin-001  (vm-fend)         │   │  🔒 vm-prd-tk-bend-cin-001  (vm-bend)        │     │
-  │  │  • IIS :80/:443  servindo dist/ do React      │   │  • IIS + iisnode :80 (API)                   │     │
-  │  │  • URL Rewrite + ARR (proxy reverso)          │──▶│  • Node executa fifa2026-api/                │     │
-  │  │  • web.config: reescreve /api/* ──────────────┼──▶│  • .env → IP privado da vm-data (10.30.1.x)  │     │
-  │  └───────────────────────────────────────────────┘   └──────────────────────┬───────────────────────┘     │
-  └─────────────────────────────────────────────────────────────────────────────┼──────────────────────────┘
-                                                                                 │ mssql 1433 (IP privado)
-        ═══════════════════════════ 🔗 VNET PEERING GLOBAL ══════════════════════╪══════════════════════════
-                                                                                 ▼
-  ┌──────────────────── vnet-prd-inf-aes-001  (Australia East, 10.30.0.0/16) ─────────────────────────────┐
-  │  🏷️ NSG  nsg-prd-inf-aes-001                                                                           │
-  │  ┌── snet-prd-inf-data-aes-001 (10.30.1.0/24) ──────────────────────────────────────────────────────┐ │
-  │  │  🟥 vm-prd-tk-data-aes-001  (vm-data)  — imagem SQL Server 2022 (já instalado)                     │ │
-  │  │  • Autenticação SQL: adminsql (configurada no wizard) · Database FIFA2026Tickets (do bacpac)       │ │
-  │  └────────────────────────────────────────────────────────────────────────────────────────────────┘ │
-  └──────────────────────────────────────────────────────────────────────────────────────────────────────┘
+![Arquitetura FIFA 2026 Tickets — cenário VMs (3 VMs, 2 VNets em 2 regiões, 2 NSGs, peering global)](images/arquitetura-fifa2026-tickets-vms.png)
 
-   🌐 Durante o lab: as 3 VMs têm IP público → RDP direto em cada uma.
-   🔒 Na Fase 8 (hardening final): remove-se o IP público de vm-bend e vm-data; acesso passa a ser via jump host (vm-fend).
-```
+> 🔁 **Fluxo:** ❶ o torcedor acessa o **frontend** (80/443) → ❷ o **ARR** reescreve `/api/*` para o **backend** (porta 80, só de dentro da VNet) → ❸ a **API** consulta o **SQL** pelo IP privado via **peering** (1433). A seta tracejada é a administração **RDP (3389, somente `MEU_IP`)** nos IPs públicos das 3 VMs — substituída pelo acesso via **jump host** (`vm-fend`) na **Fase 8**.
 
 **Princípios de design (e o que isso ensina):**
 
