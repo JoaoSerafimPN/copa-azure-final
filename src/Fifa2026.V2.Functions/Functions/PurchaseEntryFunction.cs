@@ -38,6 +38,10 @@ public sealed class PurchaseEntryFunction
         [ServiceBusOutput("tickets-purchase", Connection = "ServiceBusConnection")]
         public string? Message { get; set; }
 
+        // [HttpResult] é OBRIGATÓRIO em multi-output binding com integração ASP.NET Core
+        // (ConfigureFunctionsWebApplication): sem ele, o host não escreve o IActionResult
+        // na resposta e devolve 200 vazio (o output do Service Bus continua funcionando).
+        [HttpResult]
         public IActionResult? HttpResponse { get; set; }
     }
 

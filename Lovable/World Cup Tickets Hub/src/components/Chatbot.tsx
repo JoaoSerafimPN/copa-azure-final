@@ -15,10 +15,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { useIsAuthenticated } from '@azure/msal-react';
 import { useLlmChat } from '@/hooks/useLlmChat';
 import { isLlmProxyConfigured } from '@/lib/llm';
+import { isEntraConfigured } from '@/lib/authV2';
 
 export const Chatbot: React.FC = () => {
+  const isAuthenticated = useIsAuthenticated();
   const { messages, loading, provider, error, send } = useLlmChat();
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -28,6 +31,14 @@ export const Chatbot: React.FC = () => {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, loading]);
+
+  // UX: o assistente só aparece quando o usuário está logado via Entra. O gateway
+  // exige token Entra válido em /llm e /mcp (F3) — sem login o chat sempre daria 401.
+  // Esconder o botão (em vez de mostrar um chat que falha) evita essa confusão.
+  // Hooks acima são sempre chamados (regras dos Hooks); o early-return vem depois.
+  if (!isEntraConfigured() || !isAuthenticated) {
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
